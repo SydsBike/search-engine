@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "module": "nodenext",
+        "target": "es2023",
+        "noEmit": true
+    }
+}

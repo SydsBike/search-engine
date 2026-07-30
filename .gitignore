@@ -1,0 +1,28 @@
+# Dependencies
+# Rebuildable from package.json + package-lock.json via `npm install`.
+node_modules/
+
+# SQLite database
+# The crawl corpus lives here and will grow to gigabytes. Git keeps every
+# committed version forever, so this must never be tracked.
+# -wal and -shm are SQLite's write-ahead log and shared-memory sidecar files.
+*.db
+*.db-wal
+*.db-shm
+
+# Crawl output
+# Uncomment and set once the fetched-page directory has a name.
+# data/
+
+# Secrets
+# Anything with credentials or API keys. Nothing uses this yet.
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# macOS
+# Finder writes these into any folder it displays.
+.DS_Store
