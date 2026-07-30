@@ -1,14 +1,19 @@
 {
+  "//": "package.json is strict JSON and cannot take real comments, so these \"//\" keys are the convention instead. npm ignores them and preserves them through installs. Real comments ARE allowed in tsconfig.json.",
   "name": "search-engine",
   "version": "1.0.0",
   "description": "small search engine that will crawl the internet, index files, and rank files to be return by a search interface",
   "license": "ISC",
   "author": "",
+  "//type": "ESM, chosen deliberately over commonjs. Means import/export instead of require, and allows top-level await. tsconfig's \"module\": \"nodenext\" reads THIS field to decide how to treat .ts files, so the two stay in sync.",
   "type": "module",
+  "//main": "Inert. This field only matters for packages that other code imports, and nothing imports this project. Safe to delete. Do NOT change it to .ts — a consumer's Node could not read TypeScript.",
   "main": "index.js",
+  "//scripts": "Each value is a string handed to the shell when you run `npm run <name>`. npm puts node_modules/.bin on PATH first, so bare `tsx` and `tsc` resolve to the local copies. Names here are mine to invent; top-level keys in this file are npm's fixed vocabulary.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "//devDependencies": "Build-time tools only — nothing here is imported by the running program, so a deployment could skip them. better-sqlite3 will go in \"dependencies\" instead, since the crawler genuinely imports it. The caret in ^7.0.2 means >=7.0.2 and <8.0.0: minor and patch updates allowed, major held back because that is where breaking changes live.",
   "devDependencies": {
     "@types/node": "^26.1.2",
     "tsx": "^4.23.1",

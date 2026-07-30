@@ -1,8 +1,41 @@
+// tsconfig.json — read by `tsc` and by VSCode's TypeScript language server.
+// It governs TYPE CHECKING, not running. tsx/esbuild strip types without
+// reading this file, so nothing here affects how the code executes.
+//
+// Comments are legal here (TypeScript ships its own config parser that allows
+// them). They are NOT legal in package.json, which is strict JSON.
+//
+// Note: `include` and `exclude` are TOP-LEVEL keys, siblings of
+// "compilerOptions" — not members of it. Add them outside this object.
 {
     "compilerOptions": {
+        // Umbrella flag: turns on ~8 checks at once. The two that matter most:
+        //   noImplicitAny   — an untyped parameter is an error, not a silent
+        //                     `any` (which would disable checking entirely).
+        //   strictNullChecks — null/undefined aren't assignable to everything,
+        //                     so "this page had no <title>" must be handled
+        //                     at the point it's written, not at crawl time.
         "strict": true,
+
+        // "Do what modern Node does." Makes TypeScript read package.json's
+        // "type" field — currently "module", so .ts files are treated as ESM.
+        // Also sets module resolution automatically (no separate line needed).
+        // Consequence: relative imports need a file extension, and the
+        // convention is the OUTPUT extension — "./fetcher.js" for fetcher.ts.
+        // Setting "allowImportingTsExtensions": true would allow "./fetcher.ts"
+        // literally; it only works because noEmit is true. Undecided.
         "module": "nodenext",
+
+        // Which JavaScript version the code is checked against. Decides what
+        // syntax is legal and which built-in APIs are typed (es2023 includes
+        // things like Array.prototype.findLast). Node 24 supports more than
+        // this — a deliberately conservative floor, easy to raise later.
         "target": "es2023",
+
+        // Don't write any .js files. By default tsc emits a .js next to every
+        // .ts; tsx already handles running, so those would just be clutter
+        // needing their own gitignore entries. With this, `npx tsc` becomes a
+        // pure checker: it reports problems and produces nothing.
         "noEmit": true
     }
 }
