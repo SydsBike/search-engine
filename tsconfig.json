@@ -37,5 +37,7 @@
         // needing their own gitignore entries. With this, `npx tsc` becomes a
         // pure checker: it reports problems and produces nothing.
         "noEmit": true
-    }
+    },
+    //Only search src directory for .ts files
+    "include": ["src"]
 }
