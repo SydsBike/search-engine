@@ -45,28 +45,47 @@ headers. Node is not bound by the same-origin policy.
 **301 vs 302 matters to a crawler.** Permanent means the stored URL should be
 updated; temporary means keep the original.
 
+**Redirects are not universal.** Of the four pinned seeds, only
+`http://news.ycombinator.com` redirects (301 → https, absolute `Location`, one hop).
+All three curlie.org seeds return 200 directly. Requesting `https://` up front
+avoids the hop entirely — worth remembering when the crawler normalizes seed URLs.
+
 ---
 
 ## Content-Type and charset
 
 **charset is an optional parameter on the Content-Type header, not a separate
-field**, and it is frequently absent. Observed both forms:
+field**, and it is frequently absent. Observed three distinct forms across the seeds:
 
 | URL | Content-Type |
 |---|---|
 | example.com | `text/html` |
 | news.ycombinator.com | `text/html; charset=utf-8` |
+| curlie.org (all three seed pages) | `text/html;charset=UTF-8` |
 
 Anything storing charset must tolerate its absence.
+
+**The formatting varies and both forms are legal.** Note HN sends `; charset=utf-8`
+(space, lowercase) while Curlie sends `;charset=UTF-8` (no space, uppercase). The
+whitespace after the semicolon is optional per spec, and charset values are
+case-insensitive. Parsing that splits on `"; "` or compares literally against
+`"utf-8"` will work against one seed and silently fail against the other. Two of the
+four pinned seeds already disagree — parse the header properly rather than by string
+matching.
 
 ---
 
 ## URLs
 
-**Trailing slashes are added client-side.** Requesting `https://news.ycombinator.com`
-returns a `response.url` of `https://news.ycombinator.com/`. This is URL
-normalization in the client before the request goes out — *not* a redirect
-(`redirected: false`).
+**Trailing slashes are added client-side, but only to empty paths.** Requesting
+`https://news.ycombinator.com` returns a `response.url` of
+`https://news.ycombinator.com/`, and `https://curlie.org` becomes
+`https://curlie.org/`. But `https://curlie.org/Reference/Directories` comes back
+unchanged — no slash appended. So normalization supplies the root path when there
+isn't one; it does not append a slash to every URL.
+
+This is URL normalization in the client before the request goes out — *not* a
+redirect (`redirected: false`).
 
 Relevant to the crawler's "are these the same URL" logic.
 
@@ -90,6 +109,23 @@ origins, with all headers still readable, including ones a browser would hide.
 **Errors have no own enumerable properties.** `name`, `message`, and `stack` are all
 non-enumerable or on the prototype, so `JSON.stringify(err)` yields `{}`. `stack` is
 a superset of `message` — its first line is `Name: message`, then the call frames.
+
+**Response objects behave the same way, and resist stringification.** Their data
+lives in prototype getters, not own enumerable properties:
+
+| expression | result |
+|---|---|
+| `` `${responses}` `` | `[object Response],[object Response]` |
+| `String(response)` | `[object Response]` |
+| `JSON.stringify(response)` | `{}` |
+| `console.log(response)` | full pretty-printed inspection |
+
+Template literals **stringify** — `${}` calls `String()`, and for an array that means
+`Array.prototype.toString()` joining comma-separated. `console.log` with a non-string
+argument **inspects** instead, walking the object. Two different mechanisms;
+interpolating an object loses the useful one. `console.log` accepts multiple
+arguments and formats each by type, so a label and an object need not be fused into
+one string.
 
 ---
 
@@ -122,6 +158,8 @@ so the page needn't be refetched or reindexed.
 **Schema inputs for Phase 0 step 4:**
 
 - charset is optional and often absent → nullable
+- Content-Type formatting varies legally between sites (whitespace, case) → parse the
+  header, don't string-match it
 - requested URL and final URL are distinct values, both worth storing
 - 301 vs 302 determines whether a stored URL should be updated
 - a redirect chain is variable-length → storing the chain vs. only the endpoint is a

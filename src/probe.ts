@@ -1,4 +1,8 @@
 const urlToFetch = "http://news.ycombinator.com";
+const curlieUrl = "https://curlie.org";
+const curlieRefDir = "https://curlie.org/Reference/Directories";
+const curlieCompDir =
+  "https://curlie.org/Computers/Internet/Searching/Directories";
 
 async function generateResponse(url: string) {
   const request = new Request(url, { redirect: "manual" });
@@ -19,7 +23,7 @@ async function generateResponse(url: string) {
         }
       }
     }
-    console.log(responses);
+    console.log(`Response data from ${url}: `, responses);
   } catch (error) {
     if (error instanceof Error) {
       console.log(error.message);
@@ -29,4 +33,7 @@ async function generateResponse(url: string) {
   }
 }
 
-generateResponse(urlToFetch);
+await generateResponse(urlToFetch);
+await generateResponse(curlieUrl);
+await generateResponse(curlieRefDir);
+await generateResponse(curlieCompDir);
