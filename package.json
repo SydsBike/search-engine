@@ -15,8 +15,12 @@
   },
   "//devDependencies": "Build-time tools only — nothing here is imported by the running program, so a deployment could skip them. better-sqlite3 will go in \"dependencies\" instead, since the crawler genuinely imports it. The caret in ^7.0.2 means >=7.0.2 and <8.0.0: minor and patch updates allowed, major held back because that is where breaking changes live.",
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.1.2",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
   }
 }
