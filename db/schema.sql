@@ -32,3 +32,15 @@ CREATE TABLE IF NOT EXISTS docs (
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS idx_docs_content_hash ON docs(content_hash);
+
+CREATE TABLE IF NOT EXISTS host_state (
+    host TEXT PRIMARY KEY NOT NULL,
+    next_allowed_at INTEGER NOT NULL DEFAULT 0,
+    crawl_delay_ms INTEGER NOT NULL DEFAULT 1000,
+    request_count INTEGER NOT NULL DEFAULT 0,
+    robots_txt TEXT NULL,
+    robots_fetched_at INTEGER NULL,
+    robots_status INTEGER NULL,
+    disabled INTEGER NOT NULL DEFAULT 0,
+    disabled_reason TEXT NULL
+) STRICT;
