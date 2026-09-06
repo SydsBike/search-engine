@@ -38,6 +38,6 @@
         // pure checker: it reports problems and produces nothing.
         "noEmit": true
     },
-    //Only search src directory for .ts files
+    // Only search src directory for .ts files
     "include": ["src"]
 }
