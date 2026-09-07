@@ -142,14 +142,24 @@ governing principle this is the honest label. **Pending Jim's confirmation.**
 ## Out of scope of this spec
 
 - **Relative-reference resolution.** `../pricing` and relative `Location` headers
-  need resolving against a base URL before normalization. Design parked: instinct
-  is two composed functions — `resolve(href, base)` then `normalize(absolute)` —
-  keeping the normalizer pure with one input. Whatever shape lands, the 15 rules
-  bind the normalize step.
-- **Rejection representation.** How "returns nothing" (rule 2) is spelled in
-  TypeScript is an implementation decision. One architectural constraint: rejection
-  is an EXPECTED outcome, thousands of times per crawl — expected conditions don't
-  throw (step 3 lesson).
+  need resolving against a base URL before normalization. **DECIDED 2026-09-06:**
+  two composed functions in `src/url.ts` — `resolve(href: string, base: string):
+  string | null` (faithful RFC resolution via `new URL(href, base)`, no opinions)
+  then `normalize(url: string): string | null` (all 15 rules, including rule 2's
+  scheme gatekeeping — the spec's own wording assigns rejection to the
+  normalizer). Both synchronous: pure CPU, nothing to await. The 15 rules bind
+  the normalize step.
+- **Rejection representation.** **DECIDED 2026-09-06: `return null`** — both
+  functions return `string | null`, one convention at the seam. Rationale:
+  rejection is an EXPECTED outcome, thousands of times per crawl — expected
+  conditions don't throw (step 3 lesson); the consumer is a check-skip-continue
+  loop; `null` is deliberate absence (only exists if someone wrote `return
+  null`), where `undefined` also arises by accident and would make "rejected"
+  indistinguishable from "buggy branch forgot to return." Platform precedent in
+  this exact domain: `Headers.get()` returns `string | null`. Note: a rejected
+  link leaves NO trace in the database — `frontier`'s PK is the normalized URL,
+  so there is no row to hang a `skip_reason` on; scheme rejections happen below
+  the bookkeeping layer entirely (flagged to Jim in case a counter is wanted).
 
 ## Implementation flags
 

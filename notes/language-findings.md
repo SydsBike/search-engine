@@ -44,6 +44,14 @@ a missing `await` on `response.json()`.
 above it in the chain, including failures inside recursion. Its parameter is
 `unknown` for the same reason a caught value is.
 
+**The async litmus test: does this function wait for anything it doesn't already
+have?** `async` marks functions that wait on something outside the process —
+network, disk, timers. A function that only pushes characters around in memory
+(`resolve`/`normalize`: string in, string out, `new URL()` is synchronous) should be
+synchronous. Making it `async` anyway wraps the result in a `Promise<...>`, forces
+every caller to `await`, and spreads async-ness up the call chain — all to deliver a
+value that was ready instantly.
+
 ---
 
 ## Promise chains without async/await
@@ -133,6 +141,90 @@ files next to every `.ts`. Run `npx tsc` with no arguments; the config's `includ
 already scopes it. Contrast with `tsx src/probe.ts`, which *does* take a filename —
 `tsc` checks a project, `tsx` runs a file.
 
+**`void` vs `undefined` vs `null` as "nothing."** `void` is not an absence value —
+it means "don't inspect this result" and belongs on side-effect functions
+(`console.log`). When the caller MUST check "answer or no answer?", the choice is
+`string | undefined` vs `string | null` — and `null` wins because it is
+*deliberate* absence: the only way it appears is someone writing `return null`.
+`undefined` also arises by accident (forgotten `return`, a branch falling off the
+end), making "rejected on purpose" indistinguishable from "bug." Platform precedent
+in exactly this shape: `Headers.get(): string | null`. Union syntax is a single
+pipe (`string | null`) — `||` is the value-level OR operator, a different language.
+
+**Return annotations on exported functions are contract enforcement.** Inference
+could derive them, but the explicit annotation turns a future accidental
+`undefined`-returning branch into a compile error instead of a quiet contract
+change. Seen live: an empty stub body against `: string | null` fails with TS2355
+("must return a value") — an empty body implicitly returns `undefined`, which the
+union deliberately excludes.
+
+**Decided 2026-09-07: `"allowImportingTsExtensions": true`.** Under
+`module: nodenext`, relative imports must carry a file extension. The default
+convention is the OUTPUT extension (`"./url.js"` for `url.ts`) because tsc never
+rewrites specifiers — but in this project no `.js` file ever exists (`noEmit` +
+tsx), so that spelling names a ghost. With the flag, imports name the file actually
+on disk: `"./url.ts"`. Legal only because `noEmit` is on. Accepted cost, stated
+once: a future switch to compiled output means changing every relative import.
+
+---
+
+## ESM modules and imports
+
+**Three kinds of import specifier**, distinguished by prefix:
+
+| specifier | kind | resolution |
+|---|---|---|
+| `"better-sqlite3"` | bare | package name; walk up the tree looking for `node_modules`, then that package's own entry-point field |
+| `"./url.ts"` | relative | a file, relative to the importing file; `./` or `../` is what MAKES it a path |
+| `"node:path"` | built-in | ships inside Node; the prefix is unambiguous and can't be shadowed |
+
+The specifier is always a static quoted string literal — resolved before any code
+runs, so no variables or template literals. (`await import(expr)` is the runtime
+exception.)
+
+**`import` moves code, not data.** What crosses at import time is functions; data
+flows at runtime through arguments. Corollary: **scripts depend on libraries,
+never the reverse.** `harvest.ts` imports from `url.ts`; `url.ts` never learns its
+callers exist. A library must be inert to import — if `url.ts` fetched a page at
+module top level, every importer would trigger a network request as a side effect
+of the import statement.
+
+**Default vs named imports.** A default import's local name is the importer's
+choice (`import Database from "better-sqlite3"` — CJS `module.exports` maps to the
+default; `import { Database }` fails). Named imports must match exported names
+(`import { readFileSync } from "node:fs"`). `export` is a module's entire public
+surface — a module with no exports is legal but unusable from outside.
+
+---
+
+## The WHATWG URL class
+
+**`new URL(href, base)` IS RFC 3986 reference resolution — never hand-classify
+href shapes.** Absolute hrefs ignore the base; relative ones resolve against it;
+protocol-relative `//cdn.example.com/x` takes the base's scheme; fragment-only and
+dot-segment cases follow the spec. Writing starts-with checks means re-implementing
+the algorithm badly.
+
+**With a valid base, almost nothing throws** (verified in REPL, 2026-09-07):
+
+- `"banana"` → resolves as a relative path (`https://host/dir/banana`) — a valid,
+  nonsense URL. Garbage doesn't announce itself by throwing; it 404s later.
+- `""` → the base itself.
+- `"mailto:bob@x.com"` → parses FINE (absolute, base ignored). So rejecting
+  non-http(s) schemes can never be a caught error — it is an explicit `.protocol`
+  check after successful parsing.
+
+**What does throw** (rare, `TypeError`): a self-declared-absolute unparseable URL
+(`"http://"`), an impossible port (`"https://x:99999"`). Still the *expected*
+category — this arrives from strangers' HTML — so it is caught inside `resolve`
+and returned as `null`, never propagated.
+
+**The constructor also normalizes on its own** — scheme/host lowercasing,
+dot-segment resolution, default-port stripping, empty path → `/` — but NOT
+everything the frozen spec requires, and some things it does are things the spec
+constrains (percent-encoding changes, query handling). The gap is the
+implementation work; see the implementation flags in `notes/url-normalization.md`.
+
 ---
 
 ## Objects, printing, serialization
@@ -182,3 +274,9 @@ being run. If changes seem to have no effect, check which file is actually open.
 **Push placement relative to the exit path.** Hit twice, in both the loop and the
 recursive versions: if the accumulate step lives inside the continue-branch, the
 terminal value is never collected. Symptom is an array one element short.
+
+**A zero-byte file that "has content."** Saying a file is written means the editor
+buffer says so — the disk may still hold 0 bytes until Cmd+S. Verified twice: `cat`
+printed nothing and `wc -c` said 0 while the editor showed finished code. Disk
+truth comes from `cat`/`wc -c`, not from the tab. Sibling of the resurrect-on-save
+trap: both are the editor buffer and the filesystem disagreeing.

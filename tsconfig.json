@@ -20,10 +20,8 @@
         // "Do what modern Node does." Makes TypeScript read package.json's
         // "type" field — currently "module", so .ts files are treated as ESM.
         // Also sets module resolution automatically (no separate line needed).
-        // Consequence: relative imports need a file extension, and the
-        // convention is the OUTPUT extension — "./fetcher.js" for fetcher.ts.
-        // Setting "allowImportingTsExtensions": true would allow "./fetcher.ts"
-        // literally; it only works because noEmit is true. Undecided.
+        // Consequence: relative imports must carry a file extension — see
+        // allowImportingTsExtensions below for which extension.
         "module": "nodenext",
 
         // Which JavaScript version the code is checked against. Decides what
@@ -36,7 +34,15 @@
         // .ts; tsx already handles running, so those would just be clutter
         // needing their own gitignore entries. With this, `npx tsc` becomes a
         // pure checker: it reports problems and produces nothing.
-        "noEmit": true
+        "noEmit": true,
+
+        // Relative imports name the file actually on disk — "./url.ts" — instead
+        // of the default convention (the OUTPUT extension, "./url.js"), which
+        // here would point at a file that never exists: noEmit is on and tsx
+        // runs the .ts directly. Only legal because noEmit is true.
+        // Decided 2026-09-07. Accepted cost, stated once: switching to compiled
+        // output later means changing every relative import.
+        "allowImportingTsExtensions": true
     },
     // Only search src directory for .ts files
     "include": ["src"]
